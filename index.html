@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Generador de CURP</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; background: #fafafa; }
+    h1 { color: #333; }
+    .formulario { margin-bottom: 20px; background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 6px; width: 60%; }
+    .campo { margin-bottom: 12px; }
+    label { display: inline-block; width: 150px; font-weight: bold; }
+    input[type="text"], input[type="date"], select { padding: 6px; width: 250px; text-transform: uppercase; }
+    button { padding: 8px 16px; cursor: pointer; font-size: 14px; background-color: #333; color: white; border: none; border-radius: 4px; }
+    button:hover { background-color: #555; }
+    
+    #resultado {
+      margin-top: 20px; padding: 15px; font-size: 20px; font-family: monospace; letter-spacing: 2px;
+      border: 2px solid green; display: none; border-radius: 6px; background: #e6ffe6;
+    }
+
+    .desglose { margin-top: 15px; font-family: monospace; font-size: 14px; }
+    .desglose table { border-collapse: collapse; width: 60%; background: #fff;}
+    .desglose th, .desglose td { border: 1px solid #999; padding: 6px 12px; text-align: left; }
+    .desglose th { background-color: #e0e0e0; }
+  </style>
+</head>
+<body>
+
+  <h1>Generador de CURP</h1>
+  
+  <div class="formulario">
+    <div class="campo"><label>Nombre(s):</label> <input type="text" id="nombre" value="JOSE ANTONIO"></div>
+    <div class="campo"><label>Apellido Paterno:</label> <input type="text" id="apPaterno" value="MATUZ"></div>
+    <div class="campo"><label>Apellido Materno:</label> <input type="text" id="apMaterno" value="ARGUETA"></div>
+    <div class="campo"><label>Fecha Nacimiento:</label> <input type="date" id="fecha"></div>
+    <div class="campo">
+      <label>Sexo:</label> 
+      <select id="sexo">
+        <option value="H">Hombre (H)</option>
+        <option value="M">Mujer (M)</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label>Estado:</label> 
+      <select id="estado">
+        <option value="OC">Oaxaca (OC)</option>
+        <option value="QR">Quintana Roo (QR)</option>
+      </select>
+    </div>
+    <button onclick="generar()">Generar CURP</button>
+  </div>
+
+  <div id="resultado"></div>
+  <div id="desglose" class="desglose" style="display:none;"></div>
+
+  <script>
+    const VOCALES = 'AEIOU';
+    const CONSONANTES = 'BCDFGHJKLMNÑPQRSTVWXYZ';
+
+    // Funciones auxiliares para extracción léxica
+    function quitarAcentos(str) {
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+    }
+
+    function primeraVocalInterna(str) {
+      for (let i = 1; i < str.length; i++) {
+        if (VOCALES.includes(str[i])) return str[i];
+      }
+      return 'X'; // En caso de no haber vocal interna
+    }
+
+    function primeraConsonanteInterna(str) {
+      for (let i = 1; i < str.length; i++) {
+        if (CONSONANTES.includes(str[i])) return str[i];
+      }
+      return 'X';
+    }
+
+    // El nombre a usar (ignora MARIA o JOSE si hay nombres compuestos)
+    function filtrarNombre(nombreCompleto) {
+      const nombres = nombreCompleto.split(' ');
+      if (nombres.length > 1 && (nombres[0] === 'JOSE' || nombres[0] === 'MARIA')) {
+        return nombres[1];
+      }
+      return nombres[0];
+    }
+
+    function generar() {
+      let nombreRaw = quitarAcentos(document.getElementById('nombre').value.trim());
+      let apPaterno = quitarAcentos(document.getElementById('apPaterno').value.trim());
+      let apMaterno = quitarAcentos(document.getElementById('apMaterno').value.trim());
+      let fechaInput = document.getElementById('fecha').value; // Formato YYYY-MM-DD
+      let sexo = document.getElementById('sexo').value;
+      let estado = document.getElementById('estado').value;
+
+      if (!nombreRaw || !apPaterno || !apMaterno || !fechaInput) {
+        alert("Por favor llena todos los campos, incluyendo la fecha.");
+        return;
+      }
+
+      // === ANÁLISIS SEMÁNTICO: Validar fecha en el futuro ===
+      // Le agregamos 'T00:00:00' para evitar desfases por la zona horaria del navegador
+      let fechaNac = new Date(fechaInput + 'T00:00:00'); 
+      let hoy = new Date();
+      hoy.setHours(0, 0, 0, 0); // Reseteamos la hora de hoy para comparar puras fechas
+
+      if (fechaNac > hoy) {
+        alert("Error Semántico: La fecha de nacimiento no puede ser en el futuro.");
+        return; // Rompemos el proceso, no se genera la CURP
+      }
+      // ======================================================
+
+      let nombreUsar = filtrarNombre(nombreRaw);
+
+      // --- 1. <Identidad> (4 letras) ---
+      let id1 = apPaterno.charAt(0);
+      let id2 = primeraVocalInterna(apPaterno);
+      let id3 = apMaterno.charAt(0) || 'X';
+      let id4 = nombreUsar.charAt(0);
+      let tokenIdentidad = id1 + id2 + id3 + id4;
+
+      // --- 2. <fecha> (6 dígitos AAMMDD) ---
+      let [year, month, day] = fechaInput.split('-');
+      let tokenFecha = year.substring(2, 4) + month + day;
+
+      // --- 3. <sexo> (1 letra) ---
+      let tokenSexo = sexo;
+
+      // --- 4. <estado> (2 letras) ---
+      let tokenEstado = estado;
+
+      // --- 5. <consonantes> (3 letras) ---
+      let c1 = primeraConsonanteInterna(apPaterno);
+      let c2 = primeraConsonanteInterna(apMaterno);
+      let c3 = primeraConsonanteInterna(nombreUsar);
+      let tokenConsonantes = c1 + c2 + c3;
+
+      // --- 6. <homoclave> (Aleatoria para este ejercicio) ---
+      let char1 = Math.floor(Math.random() * 10); 
+      let char2 = Math.floor(Math.random() * 10); 
+      if (parseInt(year) >= 2000) {
+        char1 = String.fromCharCode(65 + Math.floor(Math.random() * 26)); 
+      }
+      let tokenHomoclave = `${char1}${char2}`;
+
+      // --- ENSAMBLAJE FINAL ---
+      let curpGenerada = tokenIdentidad + tokenFecha + tokenSexo + tokenEstado + tokenConsonantes + tokenHomoclave;
+
+      // Mostrar Resultado
+      let resDiv = document.getElementById('resultado');
+      resDiv.style.display = 'block';
+      resDiv.innerHTML = `<strong>CURP:</strong> ${curpGenerada}`;
+
+      // Mostrar desglose
+      let desgloseDiv = document.getElementById('desglose');
+      desgloseDiv.style.display = 'block';
+      desgloseDiv.innerHTML = `
+        <p><strong>Regla de Producción:</strong> &lt;Curp&gt; = &lt;Identidad&gt; &lt;fecha&gt; &lt;sexo&gt; &lt;estado&gt; &lt;consonantes&gt; &lt;homoclave&gt;</p>
+        <table>
+          <thead><tr><th>Símbolo</th><th>Valor Generado</th><th>Descripción</th></tr></thead>
+          <tbody>
+            <tr><td>&lt;Identidad&gt;</td><td>${tokenIdentidad}</td><td>1ª letra/vocal ap, 1ª letra am, 1ª letra nom</td></tr>
+            <tr><td>&lt;fecha&gt;</td><td>${tokenFecha}</td><td>Año, Mes, Día (AAMMDD)</td></tr>
+            <tr><td>&lt;sexo&gt;</td><td>${tokenSexo}</td><td>H o M</td></tr>
+            <tr><td>&lt;estado&gt;</td><td>${tokenEstado}</td><td>OC (Oaxaca) o QR (Quintana Roo)</td></tr>
+            <tr><td>&lt;consonantes&gt;</td><td>${tokenConsonantes}</td><td>Consonantes internas ap, am, nom</td></tr>
+            <tr><td>&lt;homoclave&gt;</td><td>${tokenHomoclave}</td><td>Asignación simulada</td></tr>
+          </tbody>
+        </table>
+      `;
+    }
+  </script>
+
+</body>
+</html>
