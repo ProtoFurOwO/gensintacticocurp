@@ -98,15 +98,25 @@
         return;
       }
 
-      // === ANÁLISIS SEMÁNTICO: Validar fecha en el futuro ===
-      // Le agregamos 'T00:00:00' para evitar desfases por la zona horaria del navegador
+      // === ANÁLISIS SEMÁNTICO: Validaciones de Fecha ===
       let fechaNac = new Date(fechaInput + 'T00:00:00'); 
       let hoy = new Date();
-      hoy.setHours(0, 0, 0, 0); // Reseteamos la hora de hoy para comparar puras fechas
+      hoy.setHours(0, 0, 0, 0); 
 
+      // 1. Que no sea en el futuro
       if (fechaNac > hoy) {
         alert("Error Semántico: La fecha de nacimiento no puede ser en el futuro.");
-        return; // Rompemos el proceso, no se genera la CURP
+        return; 
+      }
+
+      // 2. Que no tenga más de 120 años
+      let limiteEdad = new Date();
+      limiteEdad.setFullYear(hoy.getFullYear() - 120);
+      limiteEdad.setHours(0, 0, 0, 0);
+
+      if (fechaNac < limiteEdad) {
+        alert("Error Semántico: La edad máxima permitida es de 120 años.");
+        return;
       }
       // ======================================================
 
