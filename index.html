@@ -57,7 +57,7 @@
     const VOCALES = 'AEIOU';
     const CONSONANTES = 'BCDFGHJKLMNÑPQRSTVWXYZ';
 
-    // Funciones auxiliares para extracción léxica
+    // Funciones auxiliares
     function quitarAcentos(str) {
       return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
     }
@@ -66,7 +66,7 @@
       for (let i = 1; i < str.length; i++) {
         if (VOCALES.includes(str[i])) return str[i];
       }
-      return 'X'; // En caso de no haber vocal interna
+      return 'X'; 
     }
 
     function primeraConsonanteInterna(str) {
@@ -76,7 +76,6 @@
       return 'X';
     }
 
-    // El nombre a usar (ignora MARIA o JOSE si hay nombres compuestos)
     function filtrarNombre(nombreCompleto) {
       const nombres = nombreCompleto.split(' ');
       if (nombres.length > 1 && (nombres[0] === 'JOSE' || nombres[0] === 'MARIA')) {
@@ -85,37 +84,63 @@
       return nombres[0];
     }
 
+    // Validador de caracteres (solo letras y espacios)
+    function esSoloLetras(texto) {
+      const regex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/;
+      return regex.test(texto);
+    }
+
     function generar() {
-      let nombreRaw = quitarAcentos(document.getElementById('nombre').value.trim());
-      let apPaterno = quitarAcentos(document.getElementById('apPaterno').value.trim());
-      let apMaterno = quitarAcentos(document.getElementById('apMaterno').value.trim());
-      let fechaInput = document.getElementById('fecha').value; // Formato YYYY-MM-DD
+      let nombreVal = document.getElementById('nombre').value.trim();
+      let apPaternoVal = document.getElementById('apPaterno').value.trim();
+      let apMaternoVal = document.getElementById('apMaterno').value.trim();
+      let fechaInput = document.getElementById('fecha').value; 
       let sexo = document.getElementById('sexo').value;
       let estado = document.getElementById('estado').value;
 
-      if (!nombreRaw || !apPaterno || !apMaterno || !fechaInput) {
+      // 1. Validar que no haya campos vacíos
+      if (!nombreVal || !apPaternoVal || !apMaternoVal || !fechaInput) {
         alert("Por favor llena todos los campos, incluyendo la fecha.");
         return;
       }
 
-      // === ANÁLISIS SEMÁNTICO: Validaciones de Fecha ===
+      // === ANÁLISIS SINTÁCTICO / LÉXICO: Nombres y Apellidos ===
+      
+      // Validar longitud mínima
+      if (nombreVal.length < 3 || apPaternoVal.length < 3 || apMaternoVal.length < 3) {
+        alert("Error Sintáctico: El nombre y los apellidos deben tener al menos 3 letras.");
+        return;
+      }
+
+      // Validar caracteres (sin números ni símbolos)
+      if (!esSoloLetras(nombreVal) || !esSoloLetras(apPaternoVal) || !esSoloLetras(apMaternoVal)) {
+        alert("Error Sintáctico: El nombre y apellidos solo pueden contener letras y espacios (no números ni caracteres inválidos).");
+        return;
+      }
+
+      // Una vez validados, quitamos acentos y pasamos a mayúsculas para procesar
+      let nombreRaw = quitarAcentos(nombreVal);
+      let apPaterno = quitarAcentos(apPaternoVal);
+      let apMaterno = quitarAcentos(apMaternoVal);
+
+      // === ANÁLISIS SINTÁCTICO / SEMÁNTICO: Validaciones de Fecha ===
       let fechaNac = new Date(fechaInput + 'T00:00:00'); 
       let hoy = new Date();
       hoy.setHours(0, 0, 0, 0); 
 
-      // 1. Que no sea en el futuro
+      // Que no sea en el futuro
       if (fechaNac > hoy) {
-        alert("Error Semántico: La fecha de nacimiento no puede ser en el futuro.");
+        alert("Error Sintáctico: La fecha de nacimiento no puede ser en el futuro.");
         return; 
       }
 
-      // 2. Que no tenga más de 120 años
+      // Que no tenga más de 130 años
       let limiteEdad = new Date();
-      limiteEdad.setFullYear(hoy.getFullYear() - 120);
+      limiteEdad.setFullYear(hoy.getFullYear() - 130);
       limiteEdad.setHours(0, 0, 0, 0);
 
       if (fechaNac < limiteEdad) {
-        alert("Error Semántico: La edad máxima permitida es de 120 años.");
+        alert("Error Sintáctico: La edad máxima permitida es de 130 años.");
         return;
       }
       // ======================================================
